@@ -1,0 +1,30 @@
+
+eureka:
+
+  instance:
+    prefer-ip-address: true
+
+  client:
+    service-url:
+      defaultZone: http://localhost:8761/eureka
+    register-with-eureka: true
+    fetch-registry: true
+
+spring:
+  cloud:
+    gateway:
+      routes:
+        - id: company
+          uri: lb://COMPANYMICROSERVICE
+          predicates:
+            - Path=/api/companies/**
+
+        - id: job
+          uri: lb://JOBMICROSERVICE
+          predicates:
+            - Path=/api/jobs/**
+
+        - id: review
+          uri: lb://REVIEWMICROSERVICE
+          predicates:
+            - Path=/api/reviews/**

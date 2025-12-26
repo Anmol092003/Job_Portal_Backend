@@ -1,0 +1,105 @@
+package com.jobportal.jobmicroservice.job.service;
+
+
+
+import com.jobportal.jobmicroservice.clients.CompnayClient;
+import com.jobportal.jobmicroservice.clients.ReviewClient;
+import com.jobportal.jobmicroservice.external.Review;
+import com.jobportal.jobmicroservice.job.dto.JobDto;
+import com.jobportal.jobmicroservice.external.Company;
+import com.jobportal.jobmicroservice.job.model.Job;
+import com.jobportal.jobmicroservice.job.repository.JobRepository;
+import com.jobportal.jobmicroservice.mapper.JobMapper;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
+
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.Collectors;
+
+@Service
+public class JobServiceImpl implements JobService {
+
+    @Autowired
+    private RestTemplate restTemplate;
+
+    private CompnayClient compnayClient;
+
+    private ReviewClient reviewClient;
+
+    private final JobRepository jobRepository;
+
+    public JobServiceImpl(JobRepository jobRepository, ReviewClient reviewClient, CompnayClient compnayClient) {
+        this.jobRepository = jobRepository;
+        this.reviewClient = reviewClient;
+        this.compnayClient = compnayClient;
+    }
+
+    @Override
+    public Job createJob(Job job) {
+        return jobRepository.save(job);
+    }
+
+    @Override
+    public JobDto getJobById(Long id) {
+        Job job= jobRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Job not found with id: " + id));
+      JobDto jobDto = converToDto(job);
+      return jobDto;
+    }
+
+    @Override
+    public List<Job> getAllJobs() {
+        return jobRepository.findAll();
+    }
+
+    @Override
+    public Job updateJob(Long id, Job job) {
+        Job existingJob = jobRepository.findById(id).orElseThrow(()->new RuntimeException());
+
+        existingJob.setTitle(job.getTitle());
+        existingJob.setDescription(job.getDescription());
+        existingJob.setMinSalary(job.getMinSalary());
+        existingJob.setMaxSalary(job.getMaxSalary());
+        existingJob.setLocation(job.getLocation());
+
+        return jobRepository.save(existingJob);
+    }
+
+    @Override
+    public void deleteJob(Long id) {
+        jobRepository.deleteById(id);
+    }
+
+    @Override
+    public List<JobDto> getAllJobWithCompany(){
+
+        List<Job> jobs=getAllJobs();
+
+        return jobs.stream().map(this::converToDto).collect(Collectors.toList());
+    }
+
+    private JobDto converToDto(Job job){
+       Company company=compnayClient.getCompany(job.getCompanyId());
+
+        String url="http://REVIEWMICROSERVICE/api/companies/" + job.getCompanyId() + "/reviews";
+
+        List<Review> reviews=reviewClient.getReviews(job.getCompanyId());
+
+//        List<Review> reviews =
+//                reviewResponse.getBody() != null
+//                        ? reviewResponse.getBody()
+//                        : List.of();
+
+        return JobMapper.moptoJobWithCompanyDto(job,company,reviews);
+    }
+
+}
