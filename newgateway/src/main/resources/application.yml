@@ -1,6 +1,5 @@
 
 eureka:
-
   instance:
     prefer-ip-address: true
 
@@ -28,3 +27,6 @@ spring:
           uri: lb://REVIEWMICROSERVICE
           predicates:
             - Path=/api/reviews/**
+
+         
+
