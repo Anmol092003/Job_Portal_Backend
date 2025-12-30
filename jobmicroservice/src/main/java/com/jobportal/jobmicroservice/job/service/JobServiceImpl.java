@@ -11,6 +11,9 @@ import com.jobportal.jobmicroservice.job.model.Job;
 import com.jobportal.jobmicroservice.job.repository.JobRepository;
 import com.jobportal.jobmicroservice.mapper.JobMapper;
 
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.ratelimiter.annotation.RateLimiter;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import org.springframework.core.ParameterizedTypeReference;
@@ -21,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,6 +40,8 @@ public class JobServiceImpl implements JobService {
     private ReviewClient reviewClient;
 
     private final JobRepository jobRepository;
+
+    int attempt=0;
 
     public JobServiceImpl(JobRepository jobRepository, ReviewClient reviewClient, CompnayClient compnayClient) {
         this.jobRepository = jobRepository;
@@ -80,11 +86,22 @@ public class JobServiceImpl implements JobService {
     }
 
     @Override
+    @RateLimiter(name = "companyBreaker",fallbackMethod = "fallBackGetAllJobWithCompany")
+//    @Retry(name = "companyBreaker" )
+//    @CircuitBreaker(name = "companyBreaker" ,fallbackMethod = "fallBackGetAllJobWithCompany")
     public List<JobDto> getAllJobWithCompany(){
+
+        System.out.println("Attempts : "+ ++attempt);
 
         List<Job> jobs=getAllJobs();
 
         return jobs.stream().map(this::converToDto).collect(Collectors.toList());
+    }
+    public List<String> fallBackGetAllJobWithCompany(Exception e){
+        List<String > list=new ArrayList<>();
+        list.add("temp");
+        list.add("temp2");
+        return list;
     }
 
     private JobDto converToDto(Job job){
